@@ -2,6 +2,7 @@ import React from "react"
 
 import Vector from "./Vector"
 import SnakeGame from "./SnakeGame"
+import Board from "./Board"
 
 // 0. Setup
 // - Vector
