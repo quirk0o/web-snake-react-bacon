@@ -1,33 +1,44 @@
-// 0. Intro
+import React from "react"
+
+import Vector from "./Vector"
+import SnakeGame from "./SnakeGame"
+
+// 0. Setup
 // - Vector
-// - style.css: flexbox FTW
-// - index.html: styles are in bundle
+// - styles
+// - index.html
 
 // 1. Static board
-// - props: API, component is a function
-// - React warnings in class and classNames and keys
+// - propTypes: component API, checked by React
+// - React warnings: class vs className, lack of keys
 // - classNames function
 
 // 2. SnakeGame
 // - composition
 // - state: component is still a function
+// - random fruit in state
 
 // 3. Snake's moving
-// - component lifecycle
-// - ticks stream + random fruit
-// - defaultProps: pos and dir
-// - scan marble
+// - component lifecycle (componentDidMount)
+// - ticks stream (onValue, log)
+// - initial position & direction (defaultProps)
+// - directions stream v1 (map marble)
+// - heads stream (scan marble)
+// - setState
 
 // 4. Snake's changing direction
-// - keys stream
-// - filter marble
-// - inputStreams
-// - map marble
-// - merge marble
-// - scan again: snake's head is moving on key press
-// - sampledBy marble
+// - (refactor componentDidMount into inputStreams and snakeHeadPositions)
+// - keys stream (filter marble)
+// - actions stream (merge marble)
+// - directions stream - snake's head is moving on key press (scan marble again)
+// - snake's head is moving (sampledBy marble)
 
-// 5. Snake eats fruits
-// - score on fruitEaten
-// - slidingWindow?
-// - scan again: snake is getting bigger
+// 5. Snake is 3 cells long
+// - slidingWindow
+
+// 6. Snake eats fruits
+// - fruitEatenEvents stream
+// - score on fruitEatenEvent
+// - new random fruit on fruitEatenEvent
+// - slidingWindow doesn't work?
+// - snake is getting bigger (scan marble again)
