@@ -1,8 +1,12 @@
-import React from "react"
+import React from "react";
+import ReactDOM from 'react-dom';
 
 import Vector from "./Vector"
 import SnakeGame from "./SnakeGame"
 import Board from "./Board"
+
+ReactDOM.render(<SnakeGame boardSize={new Vector(20, 20)}/>, document.getElementById('app'));
+
 
 // 0. Setup
 // - Vector
