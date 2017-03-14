@@ -51,6 +51,12 @@ class SnakeGame extends React.Component {
         const biggerSnake = snake.concat([head]);
         return _.last(biggerSnake, this.props.initialSnakeLength + this.state.score);
       }, []);
+    const collision$ = snake$
+      .map(snake => snake.filter(el => el.equals(snake[0])).length)
+      .do(x => console.log(x))
+      .filter(collisions => collisions > 1);
+
+    collision$.subscribe(x => console.log('Game Over'));
 
     const fruitEatenEvent$ = snakeHeadPosition$
       .filter(head => head.equals(this.state.fruitPosition));
@@ -63,7 +69,7 @@ class SnakeGame extends React.Component {
     });
 
     this.subscription = snake$.subscribe(pos => {
-      console.log(pos);
+      // console.log(pos);
       return this.setState({snakePositions: pos});
     });
   }
