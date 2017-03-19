@@ -11,11 +11,12 @@ class SnakeGame extends React.Component {
     super(...args);
 
     this.initialState = {
-      snakePositions: [this.props.initialSnakePosition],
+      beataSnakePositions: [this.props.initialBeataSnakePosition],
+      adamSnakePositions: [this.props.initialAdamSnakePosition],
       fruitPosition: Vector.random(this.props.boardSize),
-      score: 0
+      adamScore: 0,
+      beataScore: 0
     };
-
 
     this.state = this.initialState;
 
@@ -27,17 +28,24 @@ class SnakeGame extends React.Component {
     const key$ = Observable
       .fromEvent(document.body, 'keyup')
       .map(e => e.keyCode);
-    const left$ = key$.filter(key => key === 37);
-    const right$ = key$.filter(key => key === 39);
 
-    return {tick$, left$, right$};
+    const beataPlayerControls = this.createPlayerControls(key$, 37, 39);
+    const adamPlayerControls = this.createPlayerControls(key$, 65, 68);
+    return {tick$, beataPlayerControls, adamPlayerControls};
   }
 
-  snakeHeadPositions({tick$, left$, right$}) {
-    const {boardSize, initialSnakePosition, initialSnakeDirection} = this.props;
+  createPlayerControls(key$, leftKey, rightKey) {
+    return {
+      left$: key$.filter(key => key === leftKey),
+      right$: key$.filter(key => key === rightKey)
+    }
+  }
 
-    const leftRotation$ = left$.mapTo(Vector.rotateLeft);
-    const rightRotation$ = right$.mapTo(Vector.rotateRight);
+  snakeHeadPositions({tick$, playerControls, initialSnakePosition}) {
+    const {boardSize, initialSnakeDirection} = this.props;
+
+    const leftRotation$ = playerControls.left$.mapTo(Vector.rotateLeft);
+    const rightRotation$ = playerControls.right$.mapTo(Vector.rotateRight);
     const action$ = Observable.merge(leftRotation$, rightRotation$);
     const direction$ = action$
       .scan((pos, action) => action(pos), initialSnakeDirection)
@@ -59,38 +67,69 @@ class SnakeGame extends React.Component {
   }
 
   initStreams() {
-    const {tick$, left$, right$} = this.inputStreams();
-    const snakeHeadPosition$ = this.snakeHeadPositions({tick$, left$, right$});
-    const snake$ = snakeHeadPosition$
-      .scan((snake, head) => {
-        const biggerSnake = snake.concat([head]);
-        return _.last(biggerSnake, this.props.initialSnakeLength + this.state.score);
-      }, []);
-    const collision$ = snake$
-      .map(snake => snake.filter(el => el.equals(snake[0])).length)
-      .filter(collisions => collisions > 1);
+    const {tick$, beataPlayerControls, adamPlayerControls} = this.inputStreams();
+    const beataSnakeHeadPosition$ = this.snakeHeadPositions({
+      tick$, playerControls: beataPlayerControls, initialSnakePosition: this.props.initialBeataSnakePosition
+    });
+    const adamSnakeHeadPosition$ = this.snakeHeadPositions({
+      tick$, playerControls: adamPlayerControls, initialSnakePosition: this.props.initialAdamSnakePosition
+    });
 
-    this.subscriptions.push(
-      collision$.subscribe(() => this.resetGame())
-    );
+    const beataSnake$ = this.buildSnake$(beataSnakeHeadPosition$, () => this.state.beataScore);
+    const adamSnake$ = this.buildSnake$(adamSnakeHeadPosition$, () => this.state.adamScore);
+
+    // const collision$ = beataSnake$
+    //   .map(snake => snake.filter(el => el.equals(snake[0])).length)
+    //   .filter(collisions => collisions > 1);
+    //
+    // this.subscriptions.push(
+    //   collision$.subscribe(() => this.resetGame())
+    // );
     const rand$ = tick$.map(() => Vector.random(this.props.boardSize));
 
-    const fruitEatenEvent$ = snakeHeadPosition$
-      .filter(head => head.equals(this.state.fruitPosition));
+    const fruitEatenEvent$ = this.buildPlayerFruitEatenEvent(beataSnakeHeadPosition$, 'beata')
+      .merge(this.buildPlayerFruitEatenEvent(adamSnakeHeadPosition$, 'adam'))
+      .do((tag) => console.log(tag))
 
-    const fruit$ = rand$.sample(fruitEatenEvent$);
-    fruit$.subscribe((pos) => {
+    const fruit$ = fruitEatenEvent$.withLatestFrom(rand$);
+    fruit$.subscribe(([playerName, pos]) => {
       this.setState({
         fruitPosition: pos,
-        score: this.state.score + 1
+        ...this.setScore(playerName)
       });
     });
 
     this.subscriptions.push(
-      snake$.subscribe(pos => {
-        return this.setState({snakePositions: pos});
+      beataSnake$.subscribe(pos => {
+        return this.setState({beataSnakePositions: pos});
       })
     );
+    this.subscriptions.push(
+      adamSnake$.subscribe(pos => {
+        return this.setState({adamSnakePositions: pos});
+      })
+    );
+  }
+
+  setScore(playerName) {
+    switch(playerName) {
+      case 'beata': return {beataScore: this.state.beataScore + 1};
+      case 'adam': return {adamScore: this.state.adamScore + 1};
+    }
+  }
+
+  buildPlayerFruitEatenEvent(snakeHeadPosition$, playerName) {
+    return snakeHeadPosition$
+      .filter(head => head.equals(this.state.fruitPosition))
+      .map(() => playerName);
+  }
+
+  buildSnake$(snakeHeadPosition$, currentScore) {
+    return snakeHeadPosition$
+      .scan((snake, head) => {
+        const biggerSnake = snake.concat([head]);
+        return _.last(biggerSnake, this.props.initialSnakeLength + currentScore());
+      }, []);
   }
 
   componentWillUnmount() {
@@ -103,12 +142,13 @@ class SnakeGame extends React.Component {
 
   render() {
     const {boardSize} = this.props;
-    const {fruitPosition, snakePositions} = this.state;
+    const {fruitPosition, beataSnakePositions, adamSnakePositions} = this.state;
 
     return (
       <div className={style.game}>
-        <div className={style.log}>Score: {this.state.score}</div>
-        <Board size={boardSize} fruitPosition={fruitPosition} snakePositions={snakePositions}/>
+        <div className={style.log}>Beata's Score: {this.state.beataScore}</div>
+        <div className={style.log}>Adam's Score: {this.state.adamScore}</div>
+        <Board size={boardSize} fruitPosition={fruitPosition} beataSnakePositions={beataSnakePositions} adamSnakePositions={adamSnakePositions} />
       </div>
     );
   }
@@ -119,7 +159,8 @@ SnakeGame.propTypes = {
 };
 
 SnakeGame.defaultProps = {
-  initialSnakePosition: new Vector(0, 0),
+  initialBeataSnakePosition: new Vector(19, 0),
+  initialAdamSnakePosition: new Vector(0, 0),
   initialSnakeDirection: new Vector(0, 1),
   initialSnakeLength: 3
 };
