@@ -10,11 +10,16 @@ class SnakeGame extends React.Component {
   constructor(...args) {
     super(...args);
 
-    this.state = {
+    this.initialState = {
       snakePositions: [this.props.initialSnakePosition],
       fruitPosition: Vector.random(this.props.boardSize),
       score: 0
     };
+
+
+    this.state = this.initialState;
+
+    this.subscriptions = [];
   }
 
   inputStreams() {
@@ -40,12 +45,22 @@ class SnakeGame extends React.Component {
     const snakeHeadPosition$ = tick$
       .withLatestFrom(direction$, (_, dir) => dir)
       .scan((pos, dir) => pos.add(dir).mod(boardSize), initialSnakePosition);
-
     return snakeHeadPosition$;
   }
 
   componentDidMount() {
-    const snakeHeadPosition$ = this.snakeHeadPositions(this.inputStreams());
+    this.initStreams();
+  }
+
+  resetGame() {
+    this.unsubscribe();
+    this.setState(this.initialState);
+    this.initStreams();
+  }
+
+  initStreams() {
+    const {tick$, left$, right$} = this.inputStreams();
+    const snakeHeadPosition$ = this.snakeHeadPositions({tick$, left$, right$});
     const snake$ = snakeHeadPosition$
       .scan((snake, head) => {
         const biggerSnake = snake.concat([head]);
@@ -53,29 +68,37 @@ class SnakeGame extends React.Component {
       }, []);
     const collision$ = snake$
       .map(snake => snake.filter(el => el.equals(snake[0])).length)
-      .do(x => console.log(x))
       .filter(collisions => collisions > 1);
 
-    collision$.subscribe(x => console.log('Game Over'));
+    this.subscriptions.push(
+      collision$.subscribe(() => this.resetGame())
+    );
+    const rand$ = tick$.map(() => Vector.random(this.props.boardSize));
 
     const fruitEatenEvent$ = snakeHeadPosition$
       .filter(head => head.equals(this.state.fruitPosition));
 
-    fruitEatenEvent$.subscribe(() => {
+    const fruit$ = rand$.sample(fruitEatenEvent$);
+    fruit$.subscribe((pos) => {
       this.setState({
-        fruitPosition: Vector.random(this.props.boardSize),
+        fruitPosition: pos,
         score: this.state.score + 1
       });
     });
 
-    this.subscription = snake$.subscribe(pos => {
-      // console.log(pos);
-      return this.setState({snakePositions: pos});
-    });
+    this.subscriptions.push(
+      snake$.subscribe(pos => {
+        return this.setState({snakePositions: pos});
+      })
+    );
   }
 
   componentWillUnmount() {
-    this.subscription.unsubscribe();
+    this.unsubscribe();
+  }
+
+  unsubscribe() {
+    this.subscriptions.forEach(sub => sub.unsubscribe());
   }
 
   render() {
