@@ -87,9 +87,9 @@ class SnakeGame extends React.Component {
     // );
     const rand$ = tick$.map(() => Vector.random(this.props.boardSize));
 
-    const fruitEatenEvent$ = this.buildPlayerFruitEatenEvent(beataSnakeHeadPosition$, 'beata')
-      .merge(this.buildPlayerFruitEatenEvent(adamSnakeHeadPosition$, 'adam'))
-      .do((tag) => console.log(tag))
+    const fruitEatenEvent$ = this.buildPlayerFruitEatenEvent(beataSnake$, 'beata')
+      .merge(this.buildPlayerFruitEatenEvent(adamSnake$, 'adam'))
+      .do((tag) => console.log(tag));
 
     const fruit$ = fruitEatenEvent$.withLatestFrom(rand$);
     fruit$.subscribe(([playerName, pos]) => {
@@ -118,9 +118,9 @@ class SnakeGame extends React.Component {
     }
   }
 
-  buildPlayerFruitEatenEvent(snakeHeadPosition$, playerName) {
-    return snakeHeadPosition$
-      .filter(head => head.equals(this.state.fruitPosition))
+  buildPlayerFruitEatenEvent(snake$, playerName) {
+    return snake$
+      .filter(snake => snake[snake.length - 1].equals(this.state.fruitPosition))
       .map(() => playerName);
   }
 
