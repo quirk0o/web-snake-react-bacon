@@ -3,7 +3,7 @@ var webpack = require('webpack');
 var ExtractTextPlugin = require('extract-text-webpack-plugin');
 
 module.exports = {
-  devtool: 'eval',
+  devtool: 'source-map',
 
   entry: [
     'webpack-dev-server/client?http://localhost:3000',
@@ -47,5 +47,5 @@ module.exports = {
   postcss: [
     require('autoprefixer'), // Automatically include vendor prefixes
     require('postcss-nested') // Enable nested rules, like in Sass
-  ]
+  ],
 };

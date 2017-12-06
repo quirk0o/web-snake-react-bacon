@@ -60,10 +60,15 @@ class SnakeGame extends React.Component {
     this.initStreams();
   }
 
-  resetGame() {
-    this.unsubscribe();
-    this.setState(this.initialState);
-    this.initStreams();
+  playerBitten(length, playerName) {
+    switch(playerName) {
+      case 'adam': return this.setState({adamScore: length - this.props.initialSnakeLength});
+      case 'beata': return this.setState({beataScore: length - this.props.initialSnakeLength});
+    }
+
+    // this.unsubscribe();
+    // this.setState(this.initialState);
+    // this.initStreams();
   }
 
   initStreams() {
@@ -78,13 +83,30 @@ class SnakeGame extends React.Component {
     const beataSnake$ = this.buildSnake$(beataSnakeHeadPosition$, () => this.state.beataScore);
     const adamSnake$ = this.buildSnake$(adamSnakeHeadPosition$, () => this.state.adamScore);
 
-    // const collision$ = beataSnake$
-    //   .map(snake => snake.filter(el => el.equals(snake[0])).length)
-    //   .filter(collisions => collisions > 1);
-    //
-    // this.subscriptions.push(
-    //   collision$.subscribe(() => this.resetGame())
-    // );
+    const beataCollision$ = beataSnakeHeadPosition$.combineLatest(adamSnake$)
+      .map(([beataHead, adamSnake]) => {
+        const adamLength = adamSnake.length;
+        const adamBitten = adamSnake.slice(0, -1).findIndex(el => el.equals(beataHead));
+        return adamBitten != -1 && (adamLength - adamBitten);
+      })
+      .filter(bitten => bitten);
+
+    this.subscriptions.push(
+      beataCollision$.subscribe((length) => this.playerBitten(length, 'adam'))
+    );
+
+    const adamCollision$ = adamSnakeHeadPosition$.combineLatest(beataSnake$)
+      .map(([adamHead, beataSnake]) => {
+        const beataLength = beataSnake.length;
+        const beataBitten = beataSnake.slice(0, -1).findIndex(el => el.equals(adamHead));
+        return beataBitten != -1 && (beataLength - beataBitten);
+      })
+      .filter(bitten => bitten);
+
+    this.subscriptions.push(
+      adamCollision$.subscribe((length) => this.playerBitten(length, 'beata'))
+    );
+
     const rand$ = tick$.map(() => Vector.random(this.props.boardSize));
 
     const fruitEatenEvent$ = this.buildPlayerFruitEatenEvent(beataSnake$, 'beata')
@@ -121,6 +143,7 @@ class SnakeGame extends React.Component {
   buildPlayerFruitEatenEvent(snake$, playerName) {
     return snake$
       .filter(snake => snake[snake.length - 1].equals(this.state.fruitPosition))
+      .do(snake => console.log('BANG', snake[snake.length - 1], this.state.fruitPosition))
       .map(() => playerName);
   }
 

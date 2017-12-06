@@ -13,7 +13,7 @@ class Board extends React.Component {
         const pos = new Vector(x, y);
         return (
           <div
-            className={classNames(style.cell, {
+            className={classNames(style.cell, `${x}_${y}`, {
               [style.beata]: beataSnakePositions.find(s => pos.equals(s)),
               [style.adam]: adamSnakePositions.find(s => pos.equals(s)),
               [style.fruit]: fruitPosition.equals(pos)
